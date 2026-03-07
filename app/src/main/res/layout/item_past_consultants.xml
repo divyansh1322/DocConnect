@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="6dp"
+    app:cardBackgroundColor="@color/doc_surface"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="0dp"
+    app:strokeColor="#F1F5F9"
+    app:strokeWidth="1.2dp"
+    android:stateListAnimator="@animator/lift_on_touch">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <View
+            android:id="@+id/statusIndicator"
+            android:layout_width="4dp"
+            android:layout_height="0dp"
+            android:background="@drawable/bg_pill_vertical"
+            android:backgroundTint="#10B981"
+            app:layout_constraintBottom_toBottomOf="@+id/tvPastDetails"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/tvPastPatientName" />
+
+        <TextView
+            android:id="@+id/tvPastPatientName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:fontFamily="sans-serif-black"
+            android:textColor="#1E293B"
+            android:textSize="17sp"
+            android:letterSpacing="-0.01"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintEnd_toStartOf="@+id/tvPastDate"
+            app:layout_constraintStart_toEndOf="@id/statusIndicator"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Marcus Thompson" />
+
+        <TextView
+            android:id="@+id/tvPastDetails"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="#64748B"
+            android:textSize="13sp"
+            app:layout_constraintStart_toStartOf="@+id/tvPastPatientName"
+            app:layout_constraintTop_toBottomOf="@id/tvPastPatientName"
+            tools:text="32 yrs • Male" />
+
+        <TextView
+            android:id="@+id/tvPastDate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_date_pill"
+            android:backgroundTint="#F8FAFC"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
+            android:textColor="#475569"
+            android:textSize="11sp"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.02"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="22 JAN 2026" />
+
+        <View
+            android:id="@+id/divider"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_marginTop="16dp"
+            android:background="#F1F5F9"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvPastDetails" />
+
+        <TextView
+            android:id="@+id/tvStatusLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_status_badge"
+            android:backgroundTint="#ECFDF5"
+            android:drawablePadding="6dp"
+            android:fontFamily="sans-serif-black"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
+            android:text="COMPLETED"
+            android:textColor="#065F46"
+            android:textSize="10sp"
+            android:letterSpacing="0.05"
+            app:drawableStartCompat="@drawable/ic_check_circle"
+            app:drawableTint="#10B981"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/divider" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnViewProfile"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="View Details"
+            android:textAllCaps="false"
+            android:textColor="@color/doc_primary"
+            android:textSize="13sp"
+            android:fontFamily="sans-serif-black"
+            app:icon="@drawable/ic_arrow_right"
+            app:iconGravity="end"
+            app:iconSize="14dp"
+            app:layout_constraintBottom_toBottomOf="@id/tvStatusLabel"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/tvStatusLabel"
+            app:rippleColor="#F0F7FF" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="8dp"
+    app:cardBackgroundColor="@color/doc_surface"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="2dp"
+    app:strokeColor="#F2F4F7"
+    app:strokeWidth="1.2dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/tvSlotDate"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:fontFamily="sans-serif-black"
+            android:textColor="#1A1C1E"
+            android:textSize="18sp"
+            android:letterSpacing="-0.01"
+            app:layout_constraintEnd_toStartOf="@+id/tvSlotStatus"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Mon, Jan 25" />
+
+        <TextView
+            android:id="@+id/tvSlotTime"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="#64748B"
+            android:textSize="14sp"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintEnd_toStartOf="@+id/btnDeleteSlot"
+            app:layout_constraintStart_toStartOf="@id/tvSlotDate"
+            app:layout_constraintTop_toBottomOf="@id/tvSlotDate"
+            tools:text="09:00 AM – 09:30 AM" />
+
+        <TextView
+            android:id="@+id/tvSlotStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_status_chip"
+            android:backgroundTint="#EFF6FF"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.05"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="4dp"
+            android:textAllCaps="true"
+            android:textColor="#2563EB"
+            android:textSize="10sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/tvSlotDate"
+            tools:text="Available" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDeleteSlot"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:padding="0dp"
+            app:icon="@drawable/ic_delete"
+            app:iconPadding="0dp"
+            app:iconSize="20dp"
+            app:iconTint="#EF4444"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvSlotStatus"
+            app:rippleColor="#FEE2E2" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

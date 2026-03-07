@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginBottom="12dp"
+    app:cardBackgroundColor="@color/doc_surface"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="2dp"
+    app:strokeColor="#F1F5F9"
+    app:strokeWidth="1.2dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/tvAppointmentTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-black"
+            android:textColor="#2563EB"
+            android:textSize="15sp"
+            android:letterSpacing="-0.02"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="10:00 AM" />
+
+        <TextView
+            android:id="@+id/tvTimeLeft"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="#64748B"
+            android:textSize="11sp"
+            app:layout_constraintEnd_toEndOf="@+id/tvAppointmentTime"
+            app:layout_constraintStart_toStartOf="@+id/tvAppointmentTime"
+            app:layout_constraintTop_toBottomOf="@id/tvAppointmentTime"
+            tools:text="30 Mins" />
+
+        <View
+            android:id="@+id/vDivider"
+            android:layout_width="1.5dp"
+            android:layout_height="0dp"
+            android:layout_marginStart="16dp"
+            android:background="#E2E8F0"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@id/tvAppointmentTime"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvPatientName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-black"
+            android:maxLines="1"
+            android:textColor="#0F172A"
+            android:textSize="16sp"
+            android:letterSpacing="-0.01"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/vDivider"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Priya Singh" />
+
+        <TextView
+            android:id="@+id/tvGender"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_pill_blue"
+            android:backgroundTint="#EFF6FF"
+            android:fontFamily="sans-serif-black"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="3dp"
+            android:textColor="#3B82F6"
+            android:textSize="10sp"
+            app:layout_constraintStart_toStartOf="@id/tvPatientName"
+            app:layout_constraintTop_toBottomOf="@id/tvPatientName"
+            tools:text="FEMALE" />
+
+        <TextView
+            android:id="@+id/tvAge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="#64748B"
+            android:textSize="12sp"
+            app:layout_constraintBottom_toBottomOf="@id/tvGender"
+            app:layout_constraintStart_toEndOf="@id/tvGender"
+            app:layout_constraintTop_toTopOf="@id/tvGender"
+            tools:text="• 34 Years" />
+
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="RoundedSquare">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <style name="RoundedImage">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="CircularImageView" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+
+
+    <style name="ProfileCard" parent="Widget.MaterialComponents.CardView">
+        <item name="cardBackgroundColor">@color/doc_surface</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/doc_divider</item>
+    </style>
+
+
+    <style name="CircleImage">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="RoundedImageSquare">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <style name="ProfileDivider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:background">@color/doc_divider</item>
+    </style>
+
+    <style name="TimeSlotStyle">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:layout_columnWeight">1</item>
+        <item name="android:layout_margin">6dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/doc_text_body</item>
+        <item name="android:background">@drawable/bg_time_slot</item>
+    </style>
+
+    <style name="TimeSlotSelectedStyle">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">40dp</item>
+        <item name="android:layout_columnWeight">1</item>
+        <item name="android:layout_margin">6dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/doc_primary</item>
+        <item name="android:background">@drawable/bg_time_selected</item>
+    </style>
+
+    <style name="ProfileMenuItem">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textColor">@color/doc_text_heading</item>
+        <item name="android:drawablePadding">16dp</item>
+        <item name="android:paddingVertical">16dp</item>
+        <item name="android:drawableTint">@color/doc_text_body</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:gravity">center_vertical</item>
+    </style>
+
+    <style name="DocInputBox" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="boxStrokeWidth">0dp</item>
+        <item name="boxBackgroundColor">@color/doc_surface_input</item>
+        <item name="startIconTint">@color/doc_primary</item>
+    </style>
+
+        <style name="SectionHeader">
+            <item name="android:layout_width">wrap_content</item>
+            <item name="android:layout_height">wrap_content</item>
+            <item name="android:textSize">12sp</item>
+            <item name="android:textStyle">bold</item>
+            <item name="android:textColor">@color/doc_text_secondary</item>
+            <item name="android:letterSpacing">0.1</item>
+            <item name="android:paddingStart">4dp</item>
+            <item name="android:layout_marginBottom">12dp</item>
+            <item name="android:textAllCaps">true</item>
+        </style>
+
+        <style name="DocLabelText">
+            <item name="android:layout_width">wrap_content</item>
+            <item name="android:layout_height">wrap_content</item>
+            <item name="android:textColor">@color/doc_text_heading</item>
+            <item name="android:textSize">14sp</item>
+            <item name="android:layout_marginBottom">8dp</item>
+            <item name="android:layout_marginTop">16dp</item>
+            <item name="android:textStyle">bold</item>
+        </style>
+
+        <style name="DocConnectInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            <item name="android:layout_width">match_parent</item>
+            <item name="android:layout_height">wrap_content</item>
+            <item name="android:layout_marginBottom">16dp</item>
+            <item name="boxStrokeColor">@color/doc_primary</item>
+            <item name="hintTextColor">@color/doc_primary</item>
+            <item name="boxBackgroundColor">@color/doc_surface</item>
+            <item name="boxCornerRadiusTopStart">8dp</item>
+            <item name="boxCornerRadiusTopEnd">8dp</item>
+            <item name="boxCornerRadiusBottomStart">8dp</item>
+            <item name="boxCornerRadiusBottomEnd">8dp</item>
+        </style>
+
+        <style name="RowContentWrapper">
+            <item name="android:layout_width">match_parent</item>
+            <item name="android:layout_height">wrap_content</item>
+            <item name="android:padding">16dp</item>
+        </style>
+
+    <style name="LabelTextStyle">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/doc_text_secondary</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:drawableTint">@color/doc_primary</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:letterSpacing">0.05</item>
+    </style>
+
+    <style name="InputBoxStyle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">52dp</item>
+        <item name="android:background">@drawable/bg_input_field</item>
+        <item name="android:drawableTint">@color/doc_primary</item>
+        <item name="android:drawablePadding">12dp</item>
+        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:textColor">@color/doc_text_primary</item>
+        <item name="android:textColorHint">@color/doc_text_hint</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:drawableTint">@color/doc_text_secondary</item>
+    </style>
+
+    <style name="DocHeaderTitle">
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/text_main</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="DocSubtitle">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/text_gray</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
+
+
+        <style name="CalendarHeader">
+            <item name="android:layout_width">0dp</item>
+            <item name="android:layout_height">wrap_content</item>
+            <item name="android:layout_weight">1</item>
+            <item name="android:gravity">center</item>
+            <item name="android:textColor">@color/text_gray</item>
+            <item name="android:textSize">10sp</item>
+            <item name="android:textStyle">bold</item>
+            <item name="android:textAllCaps">true</item>
+        </style>
+
+        <style name="CalendarDate">
+            <item name="android:layout_width">0dp</item>
+            <item name="android:layout_height">40dp</item>
+            <item name="android:layout_columnWeight">1</item>
+            <item name="android:gravity">center</item>
+            <item name="android:textSize">14sp</item>
+            <item name="android:layout_marginBottom">8dp</item>
+        </style>
+
+        <style name="CalendarDate.Normal" parent="CalendarDate">
+            <item name="android:textColor">@color/doc_text_heading</item>
+        </style>
+
+        <style name="CalendarDate.Muted" parent="CalendarDate">
+            <item name="android:textColor">#B0B0B0</item> </style>
+
+        <style name="CalendarDate.Selected" parent="CalendarDate">
+            <item name="android:textColor">@color/white</item>
+            <item name="android:background">@drawable/bg_date_selected</item>
+            <item name="android:textStyle">bold</item>
+        </style>
+
+
+        <style name="ProffInputStyle" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            <item name="boxBackgroundColor">@color/white</item>
+            <item name="boxCornerRadiusTopStart">12dp</item>
+            <item name="boxCornerRadiusTopEnd">12dp</item>
+            <item name="boxCornerRadiusBottomStart">12dp</item>
+            <item name="boxCornerRadiusBottomEnd">12dp</item>
+            <item name="boxStrokeColor">@color/doc_divider</item>
+            <item name="boxStrokeWidth">1dp</item>
+            <item name="hintTextColor">@color/doc_text_secondary</item>
+            <item name="android:textColorHint">@color/doc_text_secondary</item>
+        </style>
+
+        <style name="ProffInputStyle.Dropdown" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+            <item name="boxBackgroundColor">@color/white</item>
+            <item name="boxCornerRadiusTopStart">12dp</item>
+            <item name="boxCornerRadiusTopEnd">12dp</item>
+            <item name="boxCornerRadiusBottomStart">12dp</item>
+            <item name="boxCornerRadiusBottomEnd">12dp</item>
+            <item name="boxStrokeColor">@color/doc_divider</item>
+        </style>
+
+    <style name="DocConnect_ClickableCard">
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:foreground">?attr/selectableItemBackground</item>
+        <item name="cardBackgroundColor">@color/doc_surface</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeColor">@color/doc_divider</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <style name="FormLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">20dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:textColor">@color/doc_text_heading</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+
+    <style name="InputContainer">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:background">@drawable/bg_input_field</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingHorizontal">16dp</item>
+        <item name="android:textColorHint">@color/doc_text_hint</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+    <style name="PremiumCardStyle">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">2dp</item>
+        <item name="cardBackgroundColor">#FFFFFF</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:foreground">?attr/selectableItemBackground</item>
+    </style>
+
+    <style name="ModuleCardStyle">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_columnWeight">1</item>
+        <item name="android:layout_margin">6dp</item>
+        <item name="cardCornerRadius">20dp</item>
+        <item name="cardElevation">2dp</item>
+        <item name="cardBackgroundColor">#FFFFFF</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+        <item name="android:foreground">?attr/selectableItemBackground</item>
+    </style>
+
+    <style name="RoundedBottomSheetDialog" parent="Theme.MaterialComponents.Light.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/CustomBottomSheetStyle</item>
+    </style>
+
+    <style name="CustomBottomSheetStyle" parent="Widget.Design.BottomSheet.Modal">
+        <item name="android:background">@android:color/transparent</item>
+    </style>
+
+
+
+</resources>

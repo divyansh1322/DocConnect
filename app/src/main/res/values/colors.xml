@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_blue">#4169E1</color>
+    <color name="white">#FFFFFF</color>
+    <color name="bg_white">#FFFFFF</color>
+    <color name="bg_light_gray">#F7F8FA</color>
+    <color name="text_dark">#1A1A1A</color>
+    <color name="text_gray">#808080</color>
+    <color name="doc_text_primary">#1E293B</color>
+    <color name="doc_text_secondary">#64748B</color>
+
+        <color name="doc_primary">#0078D4</color>
+        <color name="doc_primary_dark">#005A9E</color>
+        <color name="doc_primary_light">#E0F2FF</color>
+        <color name="doc_background">#F8FAFC</color>
+        <color name="doc_surface">#FFFFFF</color>
+        <color name="doc_text_heading">#0F172A</color>
+        <color name="doc_text_body">#475569</color>
+        <color name="doc_text_hint">#94A3B8</color>
+        <color name="doc_error">#EF4444</color>
+        <color name="doc_warning">#F5DE0B</color>
+        <color name="doc_divider">#E2E8F0</color>
+        <color name="doc_surface_input">#F0F4F8</color>
+        <color name="doc_success_bg">#E6FFFA</color>
+        <color name="doc_secondary">#FF7043</color>
+        <color name="text_main">#101518</color>
+        <color name="divider">#E2E8F0</color>
+        <color name="divider_gray">#F1F5F9</color>
+        <color name="text_secondary">#5E788D</color>
+        <color name="bg_light_blue">#E0F2FF</color>
+        <color name="primary_brand">#0078D4</color>
+        <color name="primary_light">#6FA1CC</color>
+        <color name="background_clinical">#F8FAFC</color>
+        <color name="text_muted">#64748B</color>
+        <color name="error_brand">#EF4444</color>
+        <color name="error_bg">#FFF1F2</color>
+    <color name="transparent">#00000000</color>
+    <color name="doc_error_bg_light">#FEF2F2</color>
+
+
+    <color name="doc_waiting">#F59E0B</color>
+    <color name="doc_waiting_bg">#FFFBEB</color>
+
+    <color name="doc_success">#10B981</color>
+    <color name="doc_success_bgg">#ECFDF5</color>
+
+    <color name="chip_gender_bg">#EFF6FF</color>
+    <color name="chip_age_bg">#F1F5F9</color>
+
+    <color name="completed_btn_bg">#E8F5E9</color>
+
+
+
+
+
+
+
+
+
+
+
+</resources>

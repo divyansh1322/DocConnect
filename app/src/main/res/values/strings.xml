@@ -1,0 +1,46 @@
+<resources>
+    <string name="app_name">DocConnect</string>
+
+        <string-array name="gender_options">
+            <item>Male</item>
+            <item>Female</item>
+            <item>Other</item>
+        </string-array>
+
+
+        <string-array name="relationship_options">
+            <item>Father</item>
+            <item>Mother</item>
+            <item>Spouse</item>
+            <item>Son</item>
+            <item>Daughter</item>
+            <item>Brother</item>
+            <item>Sister</item>
+            <item>Other</item>
+        </string-array>
+
+
+
+        <string-array name="blood_groups">
+            <item>A+</item>
+            <item>A-</item>
+            <item>B+</item>
+            <item>B-</item>
+            <item>O+</item>
+            <item>O-</item>
+            <item>AB+</item>
+            <item>AB-</item>
+        </string-array>
+
+    <string name="symptom_icon">Symptom icon</string>
+
+
+
+
+        <string name="attribution_label_health">Consultation &amp; Health Sensors</string>
+
+        <string name="rating_excellent">Excellent</string>
+        <string name="rating_good">Good</string>
+
+
+</resources>

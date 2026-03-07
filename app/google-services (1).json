@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "737935565370",
+    "firebase_url": "https://docconnect-6d6fb-default-rtdb.firebaseio.com",
+    "project_id": "docconnect-6d6fb",
+    "storage_bucket": "docconnect-6d6fb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:737935565370:android:54a8ee39d835d3d643cb03",
+        "android_client_info": {
+          "package_name": "com.example.docconnect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5Z6EBRKLbJLrSToS9SeHWWDiQO6JMzUc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

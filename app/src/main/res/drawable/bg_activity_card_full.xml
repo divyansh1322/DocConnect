@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item>
+        <shape>
+            <gradient
+                android:angle="315"
+                android:startColor="#99D5CF"
+                android:centerColor="#2D7A7A"
+                android:endColor="#0A2E2E"
+                android:type="linear" />
+            <corners android:radius="16dp" />
+        </shape>
+    </item>
+
+    <item android:bottom="-10dp" android:top="80dp">
+        <vector android:width="300dp" android:height="120dp" android:viewportWidth="300" android:viewportHeight="120">
+            <path android:fillColor="#15FFFFFF" android:pathData="M0,120 C100,70 200,170 300,90 L300,120 L0,120 Z" />
+        </vector>
+    </item>
+
+    <item android:bottom="0dp" android:top="100dp">
+        <vector android:width="300dp" android:height="100dp" android:viewportWidth="300" android:viewportHeight="100">
+            <path android:fillColor="#2AFFFFFF" android:pathData="M0,100 C80,50 220,130 300,80 L300,100 L0,100 Z" />
+        </vector>
+    </item>
+
+</layer-list>
