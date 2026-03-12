@@ -187,7 +187,7 @@ public class UpcomingFragment extends Fragment implements SearchableFragment {
                         Toast.makeText(getContext(), "Appointment Restored!", Toast.LENGTH_SHORT).show();
                     });
 
-                    snackbar.setActionTextColor(Color.YELLOW);
+                    snackbar.setActionTextColor(Color.BLUE);
                     snackbar.show();
                 })
                 .setNegativeButton("No", null)
