@@ -1,18 +1,14 @@
 package com.example.docconnect;
 
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
@@ -21,21 +17,10 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-/**
- * LOGIN ACTIVITY (User/Patient Side)
- * 1. Handles authentication via Firebase.
- * 2. Checks roles (Admin vs User) across database nodes.
- * 3. Navigates to ForgotPasswordActivity for password resets.
- */
 public class LoginActivity extends AppCompatActivity {
-
-    // UI Elements
     private EditText emailEt, passwordEt;
     private MaterialButton signInBtn;
-    private TextView signUpTv, forgotPasswordTv;
     private ProgressBar progressBar;
-
-    // Firebase
     private FirebaseAuth mAuth;
     private DatabaseReference rootRef;
 
@@ -44,177 +29,97 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // Initialize Firebase Instances
         mAuth = FirebaseAuth.getInstance();
         rootRef = FirebaseDatabase.getInstance().getReference();
 
-        initViews();
-        setupListeners();
-    }
-
-    /**
-     * Bind XML IDs to Java Objects
-     */
-    private void initViews() {
         emailEt = findViewById(R.id.emailEt);
         passwordEt = findViewById(R.id.passwordEt);
         signInBtn = findViewById(R.id.signInBtn);
-        signUpTv = findViewById(R.id.signUpTv);
-        forgotPasswordTv = findViewById(R.id.forgotPasswordTv);
         progressBar = findViewById(R.id.progressBar);
-    }
 
-    /**
-     * Define Click Actions
-     */
-    private void setupListeners() {
-        // Trigger Login Process
-        signInBtn.setOnClickListener(v -> validateData());
+        signInBtn.setOnClickListener(v -> {
+            String email = emailEt.getText().toString().trim();
+            String password = passwordEt.getText().toString().trim();
 
-        // Open Signup Screen
-        signUpTv.setOnClickListener(v -> {
-            startActivity(new Intent(LoginActivity.this, SignupActivity.class));
-        });
-
-        // Open Dedicated Forgot Password Screen
-        forgotPasswordTv.setOnClickListener(v -> {
-            Intent intent = new Intent(LoginActivity.this, ForgotPasswordActivity.class);
-            startActivity(intent);
+            if (!TextUtils.isEmpty(email) && !TextUtils.isEmpty(password)) {
+                loginUser(email, password);
+            } else {
+                Toast.makeText(this, "Enter email and password", Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
-    /**
-     * Input Validation before calling Firebase
-     */
-    private void validateData() {
-        String email = emailEt.getText().toString().trim();
-        String password = passwordEt.getText().toString().trim();
-
-        if (TextUtils.isEmpty(email)) {
-            emailEt.setError("Email is required");
-            emailEt.requestFocus();
-        } else if (TextUtils.isEmpty(password)) {
-            passwordEt.setError("Password is required");
-            passwordEt.requestFocus();
-        } else {
-            loginUser(email, password);
-        }
-    }
-
-    /**
-     * Authenticate with Firebase Auth
-     */
     private void loginUser(String email, String password) {
-        showLoading(true);
+        setLoading(true);
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnSuccessListener(authResult -> {
-                    if (authResult.getUser() != null) {
-                        String uid = authResult.getUser().getUid();
-                        // Priority 1: Check if this user is an Admin
-                        checkAdminRole(uid);
-                    }
+                    // Auth matched! Now determine if UID belongs to Admin or User node
+                    checkIdentity(authResult.getUser().getUid());
                 })
                 .addOnFailureListener(e -> {
-                    showLoading(false);
-                    Toast.makeText(LoginActivity.this, "Error: " + e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+                    setLoading(false);
+                    Toast.makeText(this, "Login Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 
-    /**
-     * Step 1: Check the 'admins' node in Realtime Database
-     */
-    private void checkAdminRole(String uid) {
+    private void checkIdentity(String uid) {
+        // STEP 1: Look in Admins Node
         rootRef.child("admins").child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (snapshot.exists()) {
-                    String status = snapshot.child("status").getValue(String.class);
-                    // Admins must be 'active' to enter
-                    if (status == null || "active".equals(status)) {
-                        saveRoleAndNavigate("admin", AdminDashboardActivity.class);
-                    } else {
-                        handleAccessDenied("Your admin account is currently disabled.");
-                    }
+                    // FOUND IN ADMIN NODE
+                    navigateTo(AdminDashboardActivity.class, "admin");
                 } else {
-                    // If not an admin, check the 'users' node
-                    checkUserRole(uid);
+                    // NOT IN ADMIN NODE -> STEP 2: Look in Users Node
+                    checkUserNode(uid);
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                showLoading(false);
-                Toast.makeText(LoginActivity.this, "DB Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                // If Rules block reading the Admin node, it means this isn't an admin.
+                checkUserNode(uid);
             }
         });
     }
 
-    /**
-     * Step 2: Check the 'users' node in Realtime Database
-     */
-    private void checkUserRole(String uid) {
+    private void checkUserNode(String uid) {
         rootRef.child("users").child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                showLoading(false);
+                setLoading(false);
                 if (snapshot.exists()) {
-                    String status = snapshot.child("status").getValue(String.class);
-                    if ("blocked".equals(status)) {
-                        handleAccessDenied("Your account has been blocked by admin.");
-                    } else {
-                        // Check if profile setup is complete
-                        Boolean isCompleted = snapshot.child("isProfileCompleted").getValue(Boolean.class);
-                        saveRoleAndNavigate("user", Boolean.TRUE.equals(isCompleted) ? MainActivity.class : ProfileCreationActivity.class);
-                    }
+                    // FOUND IN USERS NODE
+                    boolean isComp = Boolean.TRUE.equals(snapshot.child("isProfileCompleted").getValue(Boolean.class));
+                    navigateTo(isComp ? MainActivity.class : ProfileCreationActivity.class, "user");
                 } else {
-                    // Email exists in Auth but not in DB nodes
-                    handleAccessDenied("Account record not found. Please register again.");
+                    // NOT FOUND ANYWHERE
+                    mAuth.signOut();
+                    Toast.makeText(LoginActivity.this, "No record found for this account.", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                showLoading(false);
-                Toast.makeText(LoginActivity.this, "DB Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                setLoading(false);
+                Toast.makeText(LoginActivity.this, "Database Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    /**
-     * Persistent Session Management: Saves role for SplashScreen and Auto-login
-     */
-    private void saveRoleAndNavigate(String role, Class<?> targetActivity) {
-        SharedPreferences prefs = getSharedPreferences("DocConnectData", MODE_PRIVATE);
-        prefs.edit().putString("selected_role", role).apply();
+    private void navigateTo(Class<?> targetActivity, String role) {
+        // Save role in preferences
+        getSharedPreferences("DocConnectData", MODE_PRIVATE).edit().putString("selected_role", role).apply();
 
         Intent intent = new Intent(LoginActivity.this, targetActivity);
-        // Clear activity history so user cannot go back to login screen
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
     }
 
-    /**
-     * Security: Log out and clear data if access is unauthorized
-     */
-    private void handleAccessDenied(String message) {
-        showLoading(false);
-        mAuth.signOut();
-        getSharedPreferences("DocConnectData", MODE_PRIVATE).edit().clear().apply();
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-    }
-
-    /**
-     * UI Helper: Toggles loading state and disables interaction
-     */
-    private void showLoading(boolean isLoading) {
+    private void setLoading(boolean isLoading) {
         progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
         signInBtn.setVisibility(isLoading ? View.INVISIBLE : View.VISIBLE);
-
-        // Prevent interaction during network calls
-        emailEt.setEnabled(!isLoading);
-        passwordEt.setEnabled(!isLoading);
-        forgotPasswordTv.setEnabled(!isLoading);
-        signUpTv.setEnabled(!isLoading);
     }
 }
