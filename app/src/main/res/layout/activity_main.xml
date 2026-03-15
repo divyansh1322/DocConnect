@@ -22,7 +22,7 @@
         app:itemPaddingBottom="8dp"
     android:layout_gravity="bottom"
     android:background="@color/doc_surface_input"
-    app:elevation="8dp"
+
     app:itemIconTint="@color/bnv_tab_color"
     app:itemTextColor="@color/bnv_tab_color"
     app:labelVisibilityMode="labeled"
