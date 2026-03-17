@@ -20,7 +20,6 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:contentInsetStartWithNavigation="0dp"
             android:paddingEnd="16dp">
 
             <LinearLayout
@@ -116,6 +115,7 @@
             android:textSize="12sp"
             app:icon="@drawable/ic_check_circle"
             app:iconSize="14dp"
+
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -139,7 +139,7 @@
                 android:id="@+id/doctorInputContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="@android:color/white"
+                app:cardBackgroundColor="@color/doc_surface"
                 app:cardCornerRadius="0dp"
                 app:cardElevation="16dp"
                 app:strokeWidth="0dp">

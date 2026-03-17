@@ -42,7 +42,7 @@
                     android:layout_width="44dp"
                     android:layout_height="44dp"
                     android:layout_marginStart="4dp"
-                    android:src="@drawable/ic_doctor"
+                    android:src="@drawable/ic_person_placeholder"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toEndOf="@id/btnBack"
                     app:layout_constraintTop_toTopOf="parent"
@@ -107,6 +107,10 @@
                 </com.google.android.material.card.MaterialCardView>
             </androidx.constraintlayout.widget.ConstraintLayout>
         </androidx.appcompat.widget.Toolbar>
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#EEEEEE"/>
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -127,7 +131,7 @@
             android:id="@+id/bottomControlContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardBackgroundColor="@android:color/white"
+            app:cardBackgroundColor="@color/doc_surface"
             app:cardCornerRadius="0dp"
             app:cardElevation="16dp"
             app:strokeWidth="0dp"
@@ -190,7 +194,7 @@
                         android:layout_height="wrap_content"
                         android:fontFamily="sans-serif-medium"
                         android:text="This consultation has ended. Session completed."
-                        android:textColor="#D32F2F"
+                        android:textColor="@color/doc_primary_dark"
                         android:textSize="14sp" />
                 </LinearLayout>
             </FrameLayout>
