@@ -37,6 +37,7 @@ public class DoctorHomeFragment extends Fragment {
     private View rootView;
     private boolean isDataInitialized = false;
 
+    // UI Components
     private RecyclerView rvUpcoming;
     private DoctorUpcomingAdapter adapter;
     private SwipeRefreshLayout swipeRefresh;
@@ -48,6 +49,7 @@ public class DoctorHomeFragment extends Fragment {
     private LinearLayout layoutEmptyUpcoming;
     private FrameLayout btnNotifications;
 
+    // Firebase & Data
     private DatabaseReference scheduleDbRef, doctorDbRef;
     private String currentDoctorId;
     private final List<DoctorUpcomingModel> rawList = new ArrayList<>();
@@ -55,13 +57,16 @@ public class DoctorHomeFragment extends Fragment {
     private DoctorUpcomingModel activePatient = null;
     private String lastActivePatientId = "";
 
+    // Time Management (Server-Sync)
+    private long serverTimeOffset = 0; // Difference between local phone and Firebase server
     private final Handler timeHandler = new Handler(Looper.getMainLooper());
     private final Runnable timeRunnable = new Runnable() {
         @Override
         public void run() {
             if (isAdded()) {
+                // Periodically check if an UPCOMING appt should now be ACTIVE based on time
                 processAppointmentsAndRefreshUI();
-                timeHandler.postDelayed(this, 10000);
+                timeHandler.postDelayed(this, 10000); // Check every 10 seconds
             }
         }
     };
@@ -111,6 +116,18 @@ public class DoctorHomeFragment extends Fragment {
     private void initFirebase() {
         scheduleDbRef = FirebaseDatabase.getInstance().getReference("DoctorSchedule").child(currentDoctorId);
         doctorDbRef = FirebaseDatabase.getInstance().getReference("doctors").child(currentDoctorId);
+
+        // SYNC: Listen for server time offset to prevent local clock tampering/errors
+        DatabaseReference offsetRef = FirebaseDatabase.getInstance().getReference(".info/serverTimeOffset");
+        offsetRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    serverTimeOffset = snapshot.getValue(Long.class);
+                }
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
+        });
     }
 
     private void setupRecyclerView() {
@@ -180,8 +197,12 @@ public class DoctorHomeFragment extends Fragment {
                     DoctorUpcomingModel m = d.getValue(DoctorUpcomingModel.class);
                     if (m != null && today.equals(m.getDate())) {
                         m.setKey(d.getKey());
-                        if ("COMPLETED".equalsIgnoreCase(m.getStatus())) completedTodayCount++;
-                        else if ("UPCOMING".equalsIgnoreCase(m.getStatus())) rawList.add(m);
+                        // Status Logic: Completed counts towards the total, Upcoming/Active go to processing
+                        if ("COMPLETED".equalsIgnoreCase(m.getStatus())) {
+                            completedTodayCount++;
+                        } else if ("UPCOMING".equalsIgnoreCase(m.getStatus()) || "ACTIVE".equalsIgnoreCase(m.getStatus())) {
+                            rawList.add(m);
+                        }
                     }
                 }
                 Collections.sort(rawList, (a, b) -> a.getTime().compareTo(b.getTime()));
@@ -196,9 +217,21 @@ public class DoctorHomeFragment extends Fragment {
         if (!isAdded()) return;
         activePatient = null;
         List<DoctorUpcomingModel> upcomingFiltered = new ArrayList<>();
+
         for (DoctorUpcomingModel p : rawList) {
-            if (activePatient == null && hasStarted(p.getTime())) activePatient = p;
-            else if (!hasStarted(p.getTime())) upcomingFiltered.add(p);
+            // Check if current time matches/passed the appointment time
+            boolean timeReached = hasStarted(p.getTime());
+
+            if (activePatient == null && timeReached) {
+                activePatient = p;
+                // AUTO-TRANSITION: If the app detects it's time but DB still says UPCOMING
+                if ("UPCOMING".equalsIgnoreCase(p.getStatus())) {
+                    updateStatusToActive(p);
+                }
+            } else if (!timeReached) {
+                // If the time hasn't reached yet, it stays in the "Upcoming" list below
+                upcomingFiltered.add(p);
+            }
         }
         updateDashboardUI(upcomingFiltered);
     }
@@ -211,7 +244,11 @@ public class DoctorHomeFragment extends Fragment {
             layoutActivePatientData.setVisibility(View.VISIBLE);
             layoutNoActivePatient.setVisibility(View.GONE);
             tvActiveName.setText(activePatient.getPatientName());
-            tvActiveDetails.setText(activePatient.getPatientAge() + " yrs | " + activePatient.getPatientGender());
+
+            // UI Hint: Show if patient is currently ACTIVE in session
+
+            tvActiveDetails.setText( activePatient.getPatientAge() + " yrs | " + activePatient.getPatientGender());
+
             if (!activePatient.getKey().equals(lastActivePatientId)) {
                 triggerPulseAnimation(layoutActivePatientData);
                 lastActivePatientId = activePatient.getKey();
@@ -229,7 +266,20 @@ public class DoctorHomeFragment extends Fragment {
     }
 
     /**
-     * CORE LOGIC: Multi-path update + Counter increment
+     * AUTO-UPDATE: Silently changes status to ACTIVE when appointment time hits.
+     */
+    private void updateStatusToActive(DoctorUpcomingModel m) {
+        DatabaseReference root = FirebaseDatabase.getInstance().getReference();
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("/DoctorSchedule/" + currentDoctorId + "/" + m.getKey() + "/status", "ACTIVE");
+        if (m.getPatientId() != null) {
+            updates.put("/UserBookings/" + m.getPatientId() + "/" + m.getKey() + "/status", "ACTIVE");
+        }
+        root.updateChildren(updates);
+    }
+
+    /**
+     * MANUAL UPDATE: Triggered by doctor when clicking "Completed" or "Missed"
      */
     private void updateStatusEverywhere(DoctorUpcomingModel m, String status) {
         DatabaseReference root = FirebaseDatabase.getInstance().getReference();
@@ -240,15 +290,17 @@ public class DoctorHomeFragment extends Fragment {
         }
 
         root.updateChildren(updateMap).addOnSuccessListener(aVoid -> {
-            Toast.makeText(getContext(), "Session Marked as " + status, Toast.LENGTH_SHORT).show();
-            if ("COMPLETED".equalsIgnoreCase(status)) {
-                incrementTotalPatientsCount();
+            if (isAdded()) {
+                Toast.makeText(getContext(), "Session Marked as " + status, Toast.LENGTH_SHORT).show();
+                if ("COMPLETED".equalsIgnoreCase(status)) {
+                    incrementTotalPatientsCount();
+                }
             }
         });
     }
 
     /**
-     * INCREMENT LOGIC: Increments totalPatients under the 'doctors' node atomically.
+     * ATOMIC INCREMENT: Safely increments total patients in the 'doctors' node.
      */
     private void incrementTotalPatientsCount() {
         DatabaseReference totalRef = FirebaseDatabase.getInstance().getReference("doctors")
@@ -259,7 +311,7 @@ public class DoctorHomeFragment extends Fragment {
             @Override
             public Transaction.Result doTransaction(@NonNull MutableData currentData) {
                 Integer count = currentData.getValue(Integer.class);
-                if (count == null) currentData.setValue(0);
+                if (count == null) currentData.setValue(1);
                 else currentData.setValue(count + 1);
                 return Transaction.success(currentData);
             }
@@ -270,16 +322,27 @@ public class DoctorHomeFragment extends Fragment {
         });
     }
 
+    /**
+     * SERVER-SYNCED TIME CHECK: Compares appointment time with synced server time.
+     */
     private boolean hasStarted(String timeStr) {
         try {
             SimpleDateFormat df = new SimpleDateFormat("hh:mm a", Locale.getDefault());
+
+            // Calculate true server time
+            long correctedTimeMillis = System.currentTimeMillis() + serverTimeOffset;
             Calendar now = Calendar.getInstance();
+            now.setTimeInMillis(correctedTimeMillis);
+
             Date date = df.parse(timeStr);
             if (date == null) return false;
+
             Calendar appt = Calendar.getInstance();
             appt.setTime(date);
+            // Sync calendar date to today
             appt.set(now.get(Calendar.YEAR), now.get(Calendar.MONTH), now.get(Calendar.DATE));
-            return !now.before(appt);
+
+            return !now.before(appt); // Returns true if current time >= appointment time
         } catch (Exception e) { return false; }
     }
 

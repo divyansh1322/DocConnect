@@ -18,12 +18,6 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.work.Constraints;
-import androidx.work.Data;
-import androidx.work.ExistingWorkPolicy;
-import androidx.work.NetworkType;
-import androidx.work.OneTimeWorkRequest;
-import androidx.work.WorkManager;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.imageview.ShapeableImageView;
@@ -34,7 +28,6 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -44,12 +37,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
+/**
+ * DoctorChatsFragment: High-performance fragment for managing real-time consultations.
+ * Logic: Filters by date, sorts by time, and handles doctor-patient navigation.
+ * Note: Expiry/Missed logic is handled externally (via WorkManager/Cloud Functions).
+ */
 public class DoctorChatsFragment extends Fragment implements DoctorChatAdapter.OnChatClickListener {
 
+    // --- UI COMPONENTS ---
     private View rootView;
-    private boolean isDataInitialized = false;
     private RecyclerView rvChatConsultations;
     private DoctorChatAdapter adapter;
     private List<DoctorChatModel> chatList;
@@ -59,21 +56,22 @@ public class DoctorChatsFragment extends Fragment implements DoctorChatAdapter.O
     private LinearLayout layoutEmptyState;
     private ProgressBar loader;
 
+    // --- FIREBASE ---
     private DatabaseReference rootRef, scheduleRef;
     private FirebaseAuth mAuth;
     private ValueEventListener consultationsListener;
 
-    private long serverTimeOffset = 0;
+    // --- UTILS ---
     private final Calendar calendar = Calendar.getInstance();
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
     private final SimpleDateFormat dateTimeParser = new SimpleDateFormat("yyyy-MM-dd hh:mm a", Locale.getDefault());
-
     private String selectedDate;
-    private static final int GRACE_PERIOD_MINUTES = 5;
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        // Optimization: Prevent view re-inflation
         if (rootView != null) return rootView;
+
         rootView = inflater.inflate(R.layout.fragment_doctor_chats, container, false);
 
         mAuth = FirebaseAuth.getInstance();
@@ -84,16 +82,14 @@ public class DoctorChatsFragment extends Fragment implements DoctorChatAdapter.O
         setupRecyclerView();
         setupClickListeners();
 
-        if (!isDataInitialized) {
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                if (isAdded()) {
-                    fetchServerTimeOffset();
-                    fetchDoctorProfile();
-                    startRealTimeConsultationListener();
-                    isDataInitialized = true;
-                }
-            }, 300);
-        }
+        // Start initialization after a small delay to ensure fragment stability
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (isAdded()) {
+                fetchDoctorProfile();
+                startRealTimeConsultationListener();
+            }
+        }, 300);
+
         return rootView;
     }
 
@@ -116,20 +112,6 @@ public class DoctorChatsFragment extends Fragment implements DoctorChatAdapter.O
         rvChatConsultations.setAdapter(adapter);
     }
 
-    private void fetchServerTimeOffset() {
-        rootRef.child(".info/serverTimeOffset").addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) serverTimeOffset = snapshot.getValue(Long.class);
-            }
-            @Override public void onCancelled(@NonNull DatabaseError e) {}
-        });
-    }
-
-    private long getCurrentServerTime() {
-        return System.currentTimeMillis() + serverTimeOffset;
-    }
-
     private void setupClickListeners() {
         btnBack.setOnClickListener(v -> {
             if (getActivity() != null) {
@@ -138,6 +120,7 @@ public class DoctorChatsFragment extends Fragment implements DoctorChatAdapter.O
                 startActivity(intent);
             }
         });
+
         btnCalendar.setOnClickListener(v -> showDatePicker());
     }
 
@@ -147,13 +130,14 @@ public class DoctorChatsFragment extends Fragment implements DoctorChatAdapter.O
             calendar.set(Calendar.MONTH, month);
             calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
             selectedDate = dateFormat.format(calendar.getTime());
-            startRealTimeConsultationListener();
+            startRealTimeConsultationListener(); // Refresh list for new date
         }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show();
     }
 
     private void fetchDoctorProfile() {
         String uid = mAuth.getUid();
         if (uid == null) return;
+
         rootRef.child("doctors").child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -161,8 +145,10 @@ public class DoctorChatsFragment extends Fragment implements DoctorChatAdapter.O
                     String name = snapshot.child("fullName").getValue(String.class);
                     String url = snapshot.child("profileImageUrl").getValue(String.class);
                     if (name != null) tvDoctorName.setText(name);
+
                     if (getContext() != null && url != null) {
-                        Glide.with(requireContext()).load(url).centerCrop().placeholder(R.drawable.ic_doctor).into(imgDoctor);
+                        Glide.with(requireContext()).load(url).centerCrop()
+                                .placeholder(R.drawable.ic_doctor).into(imgDoctor);
                     }
                 }
             }
@@ -170,6 +156,10 @@ public class DoctorChatsFragment extends Fragment implements DoctorChatAdapter.O
         });
     }
 
+    /**
+     * Listen for bookings assigned to this doctor.
+     * Filters by Medium (CHAT) and Date.
+     */
     private void startRealTimeConsultationListener() {
         String uid = mAuth.getUid();
         if (uid == null) return;
@@ -193,21 +183,21 @@ public class DoctorChatsFragment extends Fragment implements DoctorChatAdapter.O
                         if (model != null) {
                             model.setBookingId(data.getKey());
 
-                            // --- WORK MANAGER INTEGRATION ---
-                            if ("UPCOMING".equalsIgnoreCase(model.getStatus())) {
-                                scheduleExpiryCheck(model);
-                            }
-
-                            if ("CHAT".equalsIgnoreCase(model.getConsultationMedium()) && selectedDate.equals(model.getDate())) {
+                            // FILTER: Only show "CHAT" medium and matches Selected Date
+                            if ("CHAT".equalsIgnoreCase(model.getConsultationMedium()) &&
+                                    selectedDate.equals(model.getDate())) {
                                 chatList.add(model);
                             }
                         }
                     }
 
+                    // SORT: Earliest slots at the top
                     Collections.sort(chatList, (c1, c2) -> {
                         try {
-                            Date d1 = dateTimeParser.parse(c1.getDate() + " " + extractStartTime(c1.getTime()));
-                            Date d2 = dateTimeParser.parse(c2.getDate() + " " + extractStartTime(c2.getTime()));
+                            String t1 = c1.getTime().contains("-") ? c1.getTime().split("-")[0].trim() : c1.getTime();
+                            String t2 = c2.getTime().contains("-") ? c2.getTime().split("-")[0].trim() : c2.getTime();
+                            Date d1 = dateTimeParser.parse(c1.getDate() + " " + t1);
+                            Date d2 = dateTimeParser.parse(c2.getDate() + " " + t2);
                             return d1.compareTo(d2);
                         } catch (Exception e) { return 0; }
                     });
@@ -215,60 +205,16 @@ public class DoctorChatsFragment extends Fragment implements DoctorChatAdapter.O
                 updateUI();
                 adapter.notifyDataSetChanged();
             }
-            @Override public void onCancelled(@NonNull DatabaseError e) { if (isAdded()) loader.setVisibility(View.GONE); }
-        });
-    }
 
-    /**
-     * Schedules the background task to mark slot as missed
-     */
-    private void scheduleExpiryCheck(DoctorChatModel model) {
-        try {
-            String endTimePart = model.getTime().contains("-") ? model.getTime().split("-")[1].trim() : model.getTime().trim();
-            Date slotEndTime = dateTimeParser.parse(model.getDate() + " " + endTimePart);
-            if (slotEndTime == null) return;
-
-            long delay = (slotEndTime.getTime() + (GRACE_PERIOD_MINUTES * 60 * 1000)) - getCurrentServerTime();
-
-            if (delay > 0) {
-                Data inputData = new Data.Builder()
-                        .putString("booking_id", model.getBookingId())
-                        .putString("patient_id", model.getPatientId())
-                        .build();
-
-                OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(ExpireSlotWorker.class)
-                        .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-                        .setConstraints(new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
-                        .setInputData(inputData)
-                        .addTag("expiry_" + model.getBookingId())
-                        .build();
-
-                // Unique work ensures we don't schedule multiple workers for the same booking
-                WorkManager.getInstance(requireContext()).enqueueUniqueWork(
-                        model.getBookingId(),
-                        ExistingWorkPolicy.KEEP,
-                        request);
-            } else {
-                // If already expired, update now
-                markAsMissedInFirebase(model);
+            @Override public void onCancelled(@NonNull DatabaseError e) {
+                if (isAdded()) loader.setVisibility(View.GONE);
             }
-        } catch (Exception e) { e.printStackTrace(); }
-    }
-
-    private String extractStartTime(String timeRange) {
-        return timeRange.contains("-") ? timeRange.split("-")[0].trim() : timeRange.trim();
-    }
-
-    private void markAsMissedInFirebase(DoctorChatModel model) {
-        String doctorId = mAuth.getUid();
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("/DoctorSchedule/" + doctorId + "/" + model.getBookingId() + "/status", "MISSED");
-        updates.put("/UserBookings/" + model.getPatientId() + "/" + model.getBookingId() + "/status", "MISSED");
-        rootRef.updateChildren(updates);
+        });
     }
 
     private void updateUI() {
         if (!isAdded()) return;
+
         if (chatList.isEmpty()) {
             rvChatConsultations.setVisibility(View.GONE);
             tvAllPatientsHeader.setVisibility(View.GONE);
@@ -278,16 +224,13 @@ public class DoctorChatsFragment extends Fragment implements DoctorChatAdapter.O
             rvChatConsultations.setVisibility(View.VISIBLE);
             tvAllPatientsHeader.setVisibility(View.VISIBLE);
             layoutEmptyState.setVisibility(View.GONE);
-            tvSessionStatus.setText("⚡ " + chatList.size() + " Active Chats on " + selectedDate);
+            tvSessionStatus.setText("⚡ " + chatList.size() + " Consultations for " + selectedDate);
         }
     }
 
     @Override
     public void onStartConsultation(DoctorChatModel model) {
         if (model == null) return;
-
-        // CANCEL THE WORKER: If doctor starts chat, we don't want it to become "MISSED" later
-        WorkManager.getInstance(requireContext()).cancelUniqueWork(model.getBookingId());
 
         String doctorId = mAuth.getUid();
         Map<String, Object> updates = new HashMap<>();
@@ -298,11 +241,14 @@ public class DoctorChatsFragment extends Fragment implements DoctorChatAdapter.O
             Intent intent = new Intent(getContext(), DUChatsActivity.class);
             intent.putExtra("CHAT_DATA", model);
             startActivity(intent);
+        }).addOnFailureListener(e -> {
+            if (isAdded()) Toast.makeText(getContext(), "Connection failed.", Toast.LENGTH_SHORT).show();
         });
     }
 
     @Override
     public void onDetailsClick(DoctorChatModel model) {
+        if (model == null) return;
         Intent intent = new Intent(getContext(), DoctorActivePatientActivity.class);
         intent.putExtra("doctorId", mAuth.getUid());
         intent.putExtra("patientId", model.getPatientId());
