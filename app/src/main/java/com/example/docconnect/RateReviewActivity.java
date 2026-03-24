@@ -97,7 +97,7 @@ public class RateReviewActivity extends AppCompatActivity {
                 .placeholder(R.drawable.ic_doctor)
                 .into(ivDoctorProfile);
 
-        checkIfAlreadyRated();
+
         fetchCurrentUserName();
         setupSliderListeners();
 
@@ -168,7 +168,7 @@ public class RateReviewActivity extends AppCompatActivity {
         DatabaseReference doctorNodeRef = mDatabase.child("doctors").child(doctorId).child("reviews_ratings");
         String feedbackId = doctorNodeRef.push().getKey();
         String readableDate = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(new Date());
-
+        checkIfAlreadyRated();
         if (feedbackId == null) {
             btnSubmit.setEnabled(true);
             progressDialog.dismiss();

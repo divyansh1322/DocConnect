@@ -315,6 +315,9 @@ public class HomeFragment extends Fragment {
                     intent.putExtra("bookingId", appointment.getBookingId());
                     intent.putExtra("doctorId", appointment.getDoctorId());
                     intent.putExtra("doctorName", appointment.getDoctorName());
+                    intent.putExtra("doctorSpecialty", appointment.getDoctorSpecialty());
+                    intent.putExtra("visitDate", appointment.getDate());
+                    intent.putExtra("doctorImage", appointment.getDoctorImage());
                     startActivity(intent);
                 })
                 .setNegativeButton("Dismiss", (dialog, which) -> markPopupAsShown(appointment.getBookingId()))
