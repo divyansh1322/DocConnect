@@ -113,7 +113,7 @@ public class UDChatAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                     .load(m.getMessage())
                     .apply(new RequestOptions()
                             .placeholder(R.drawable.ic_person_placeholder) // While loading
-                            .error(R.drawable.ic_person)            // If URL fails
+                            .error(R.drawable.ic_person_placeholder)            // If URL fails
                             .transform(new RoundedCorners(32)))          // Modern rounded look
                     .into(imgHolder.img);
         }

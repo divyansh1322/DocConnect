@@ -67,10 +67,6 @@ public class PastConsultationsActivity extends AppCompatActivity {
         initViews();
         setupListeners();
 
-        // 2. SAFE INITIALIZATION (A2Z FIX):
-        // Delaying the heavy Firebase call by 200ms allows the Android 'TransitionChain'
-        // to finish opening the window, preventing the 'Mismatch current collecting' log error.
-        getWindow().getDecorView().postDelayed(this::fetchCompletedConsultations, 200);
     }
 
     /**

@@ -92,10 +92,17 @@ public class SignupActivity extends AppCompatActivity {
         String password = etPassword.getText().toString().trim();
         String confirmPassword = etConfirmPassword.getText().toString().trim();
 
-        if (TextUtils.isEmpty(name)) { etFullName.setError("Full name required"); return; }
-        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) { etEmail.setError("Valid email required"); return; }
-        if (password.length() < 6) { etPassword.setError("Min 6 characters"); return; }
-        if (!password.equals(confirmPassword)) { etConfirmPassword.setError("No match"); return; }
+        if (TextUtils.isEmpty(name))
+        { etFullName.setError("Full name required"); return; }
+
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches())
+        { etEmail.setError("Valid email required"); return; }
+
+        if (password.length() < 6)
+        { etPassword.setError("Min 6 characters"); return; }
+
+        if (!password.equals(confirmPassword))
+        { etConfirmPassword.setError("No match"); return; }
 
         setLoading(true);
         mAuth.createUserWithEmailAndPassword(email, password)

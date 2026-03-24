@@ -20,7 +20,7 @@ public class AdminAppointmentModel {
     private String date;
     private String time;
 
-    // --- Newly Added Fields (to fix Logcat errors) ---
+
     private String clinicAddress;
     private String patientId;
     private String patientGender;
