@@ -70,6 +70,7 @@ public class LoginActivity extends AppCompatActivity {
                 if (snapshot.exists()) {
                     // FOUND IN ADMIN NODE
                     navigateTo(AdminDashboardActivity.class, "admins");
+
                 } else {
                     // NOT IN ADMIN NODE -> STEP 2: Look in Users Node
                     checkUserNode(uid);
