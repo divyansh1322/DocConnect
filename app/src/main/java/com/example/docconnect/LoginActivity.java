@@ -96,7 +96,7 @@ public class LoginActivity extends AppCompatActivity {
                 } else {
                     // NOT FOUND ANYWHERE
                     mAuth.signOut();
-                    Toast.makeText(LoginActivity.this, "No record found for this account.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(LoginActivity.this, "Account Not Found.", Toast.LENGTH_SHORT).show();
                 }
             }
 
