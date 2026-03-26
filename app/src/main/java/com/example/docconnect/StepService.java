@@ -15,14 +15,21 @@ import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.util.Log;
+
 import androidx.core.app.NotificationCompat;
+
 import java.util.Calendar;
 
 /**
- * STEP SERVICE: Runs 24/7 in the background.
- * Optimized for real-time UI "ticking" and daily resets.
+ * STEP SERVICE: The 24/7 background engine.
+ * Tracks steps, updates the notification live, and handles daily resets.
  */
 public class StepService extends Service implements SensorEventListener {
+
+    private static final String TAG = "StepService";
+    private static final String CHANNEL_ID = "step_channel";
+    private static final int NOTIFICATION_ID = 1;
 
     private SensorManager sensorManager;
     private Sensor stepSensor;
@@ -32,97 +39,129 @@ public class StepService extends Service implements SensorEventListener {
     @Override
     public void onCreate() {
         super.onCreate();
-        // 1. WAKELOCK: Keeps CPU active even if the screen is off.
+
+        // 1. WAKELOCK: Keeps CPU alive so sensors work when the screen is OFF.
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         if (pm != null) {
-            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "DocConnect::StepTracker");
-            wakeLock.acquire(10 * 60 * 1000L /*10 minutes safety timeout*/);
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "DocConnect::StepTrackerLock");
+            wakeLock.acquire();
         }
+
+        Log.d(TAG, "Service Created: WakeLock acquired.");
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // 2. CREATE NOTIFICATION CHANNEL (For Android 8.0+)
         createNotificationChannel();
 
-        Notification notification = new NotificationCompat.Builder(this, "step_channel")
-                .setContentTitle("DocConnect Step Tracker")
-                .setContentText("Counting your steps in real-time...")
-                .setSmallIcon(R.drawable.ic_footstep)
-                .setOngoing(true)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .build();
+        // 3. INITIAL NOTIFICATION: Required to start as a Foreground Service.
+        Notification notification = buildStepNotification(0);
 
-        // Android 14+ FGS Type Health requirement
+        // 4. ANDROID 14+ COMPLIANCE: Must specify FOREGROUND_SERVICE_TYPE_HEALTH.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(1, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH);
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH);
         } else {
-            startForeground(1, notification);
+            startForeground(NOTIFICATION_ID, notification);
         }
 
+        // 5. REGISTER SENSORS
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         sharedPreferences = getSharedPreferences("StepPrefs", MODE_PRIVATE);
 
         if (sensorManager != null) {
             stepSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
-            // SENSOR_DELAY_UI is the key for real-time "instant" updates
-            sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI);
+            if (stepSensor != null) {
+                // SENSOR_DELAY_UI ensures real-time "ticking" on the screen.
+                sensorManager.registerListener(this, stepSensor, SensorManager.SENSOR_DELAY_UI);
+            }
         }
 
+        // 6. START_STICKY: Tells Android to restart this service if it gets killed for memory.
         return START_STICKY;
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_STEP_COUNTER) {
-            // event.values[0] is the total steps since the phone's last REBOOT
+            // event.values[0] is the total steps since the phone was last REBOOTED.
             float totalStepsSinceBoot = event.values[0];
-
-            // We call the logic method to calculate daily steps and broadcast them
-            processAndBroadcastSteps(totalStepsSinceBoot);
+            calculateDailySteps(totalStepsSinceBoot);
         }
     }
 
     /**
-     * CORE LOGIC: Manages midnight resets and triggers the instant UI update.
+     * CORE LOGIC: Manages the daily offset and broadcasts the result.
      */
-    private void processAndBroadcastSteps(float totalStepsSinceBoot) {
+    private void calculateDailySteps(float totalStepsSinceBoot) {
         String todayDate = String.valueOf(Calendar.getInstance().get(Calendar.DAY_OF_YEAR));
         String lastSavedDate = sharedPreferences.getString("last_date", "");
-        float midnightOffset = sharedPreferences.getFloat("sensor_offset", -1);
+        float sensorOffset = sharedPreferences.getFloat("sensor_offset", -1f);
         int dailySteps = 0;
 
         SharedPreferences.Editor editor = sharedPreferences.edit();
 
-        // Check for Midnight/New Day reset
+        // CHECK FOR MIDNIGHT/NEW DAY
         if (!todayDate.equals(lastSavedDate)) {
             editor.putString("last_date", todayDate);
+            // We save the current sensor value as the "start point" for today.
             editor.putFloat("sensor_offset", totalStepsSinceBoot);
             editor.putInt("last_steps", 0);
-            midnightOffset = totalStepsSinceBoot; // Update local variable for immediate use
+            sensorOffset = totalStepsSinceBoot;
         }
 
-        if (midnightOffset == -1) {
+        // CALCULATE ACTUAL STEPS
+        if (sensorOffset == -1f) {
             editor.putFloat("sensor_offset", totalStepsSinceBoot);
             dailySteps = 0;
         } else {
-            // Actual Calculation
-            dailySteps = (int) (totalStepsSinceBoot - midnightOffset);
+            dailySteps = (int) (totalStepsSinceBoot - sensorOffset);
+            // Handle case where phone reboots (sensor resets to 0)
+            if (dailySteps < 0) {
+                editor.putFloat("sensor_offset", totalStepsSinceBoot);
+                dailySteps = 0;
+            }
             editor.putInt("last_steps", dailySteps);
         }
         editor.apply();
 
-        // --- THE INSTANT BROADCAST ---
-        // Ensure HomeFragment uses intent.getIntExtra("LIVE_STEPS", 0)
-        Intent intent = new Intent("STEP_UPDATE");
-        intent.putExtra("LIVE_STEPS", dailySteps);
-        sendBroadcast(intent);
+        // UPDATE UI: Send broadcast to HomeFragment
+        Intent uiIntent = new Intent("STEP_UPDATE");
+        uiIntent.putExtra("LIVE_STEPS", dailySteps);
+        sendBroadcast(uiIntent);
+
+        // UPDATE NOTIFICATION: Update the status bar text live
+        updateNotification(dailySteps);
+    }
+
+    /**
+     * Builds the notification object with the current step count.
+     */
+    private Notification buildStepNotification(int steps) {
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("Today's Steps: " + steps)
+                .setContentText("DocConnect is tracking your health.")
+                .setSmallIcon(R.drawable.ic_footstep) // Ensure this icon exists!
+                .setOngoing(true)
+                .setOnlyAlertOnce(true) // Stops the phone from beeping on every step update
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setCategory(Notification.CATEGORY_SERVICE)
+                .build();
+    }
+
+    private void updateNotification(int steps) {
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) {
+            manager.notify(NOTIFICATION_ID, buildStepNotification(steps));
+        }
     }
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
-                    "step_channel", "Health Tracking", NotificationManager.IMPORTANCE_LOW
+                    CHANNEL_ID, "Health Tracker", NotificationManager.IMPORTANCE_LOW
             );
+            channel.setDescription("Shows real-time step count in the notification bar.");
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) manager.createNotificationChannel(channel);
         }
@@ -134,7 +173,9 @@ public class StepService extends Service implements SensorEventListener {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        // CLEANUP: Release WakeLock and stop sensor listeners
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         if (sensorManager != null) sensorManager.unregisterListener(this);
+        Log.d(TAG, "Service Destroyed: Resources released.");
     }
 }

@@ -19,14 +19,15 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH"/>
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-
 
     <application
         android:name=".DocConnectApp"
@@ -60,8 +61,7 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".MainActivity" android:exported="false" android:launchMode="singleTask"> </activity>
+        <activity android:name=".MainActivity" android:exported="false" android:launchMode="singleTask" />
         <activity android:name=".LoginActivity" android:exported="false" />
         <activity android:name=".ForgotPasswordActivity" android:exported="false" />
         <activity android:name=".SignupActivity" android:exported="false" />
@@ -94,14 +94,9 @@
         <activity android:name=".DoctorProfileCreationActivity" android:exported="false" />
         <activity android:name=".DoctorVerificationWaitingActivity" android:exported="false" />
         <activity android:name=".DUChatsActivity" android:exported="false" />
-        <activity android:name=".DoctorQualificationActivity" android:configChanges="orientation|screenSize|keyboardHidden"
-            android:windowSoftInputMode="adjustPan" android:exported="false" />
-        <activity android:name=".DoctorEditProfileActivity" android:exported="false" android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
-            android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustNothing" />
-        <activity android:name=".DoctorClinicLocationActivity" android:configChanges="orientation|screenSize|keyboardHidden|screenLayout"
-            android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustPan" android:exported="false" />
+        <activity android:name=".DoctorQualificationActivity" android:configChanges="orientation|screenSize|keyboardHidden" android:windowSoftInputMode="adjustPan" android:exported="false" />
+        <activity android:name=".DoctorEditProfileActivity" android:exported="false" android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize" android:hardwareAccelerated="true" android:windowSoftInputMode="adjustNothing" />
+        <activity android:name=".DoctorClinicLocationActivity" android:configChanges="orientation|screenSize|keyboardHidden|screenLayout" android:hardwareAccelerated="true" android:windowSoftInputMode="adjustPan" android:exported="false" />
         <activity android:name=".DoctorSupportActivity" android:exported="false" />
         <activity android:name=".DoctorReviewsActivity" android:exported="false" />
         <activity android:name=".PastConsultationsActivity" android:exported="false" />
@@ -114,10 +109,7 @@
         <activity android:name=".FAQsActivity" android:exported="false" />
         <activity android:name=".DoctorShareActivity" android:exported="false" />
 
-        <activity
-            android:name=".RateReviewActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+        <activity android:name=".RateReviewActivity" android:exported="false" android:screenOrientation="portrait" />
 
         <activity android:name=".AdminDashboardActivity" android:exported="false" />
         <activity android:name=".AppointmentsRecordActivity" android:exported="false" />
@@ -131,11 +123,24 @@
         <activity android:name=".AdminUserDetailsActivity" android:exported="false" />
         <activity android:name=".AdminUDComplaintActivity" android:exported="false" />
 
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:directBootAware="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".MyFirebaseMessagingService" android:exported="false">
-              <intent-filter>
+            <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
-              </intent-filter>
+            </intent-filter>
         </service>
 
         <service
