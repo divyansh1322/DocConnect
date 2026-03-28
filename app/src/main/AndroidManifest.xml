@@ -13,15 +13,14 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH"/>
-    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
@@ -40,7 +39,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.DocConnect"
         android:forceDarkAllowed="false"
-        tools:targetApi="q">
+        tools:targetApi="35">
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -108,7 +107,6 @@
         <activity android:name=".CancellationReasonActivity" android:exported="false" />
         <activity android:name=".FAQsActivity" android:exported="false" />
         <activity android:name=".DoctorShareActivity" android:exported="false" />
-
         <activity android:name=".RateReviewActivity" android:exported="false" android:screenOrientation="portrait" />
 
         <activity android:name=".AdminDashboardActivity" android:exported="false" />
@@ -147,7 +145,11 @@
             android:name=".StepService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="health" />
+            android:foregroundServiceType="health">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Step counting and fitness tracking for DocConnect" />
+        </service>
 
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"

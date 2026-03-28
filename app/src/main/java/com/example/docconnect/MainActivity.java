@@ -8,6 +8,7 @@ import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
@@ -23,12 +24,13 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.messaging.FirebaseMessaging;
 
 /**
- * MAIN ACTIVITY: The logic controller for DocConnect.
- * Handles role-based UI, Fragment management, FCM notifications, and Smart Back-Navigation.
+ * MAIN ACTIVITY: The core controller for DocConnect.
+ * Manages role-based navigation, background services, and permissions.
  */
 public class MainActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 1001;
+    private static final int ACTIVITY_RECOGNITION_REQUEST_CODE = 1002;
 
     public BottomNavigationView bottomNavigationView;
     public String userRole;
@@ -36,39 +38,42 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
-        // FORCE LIGHT MODE - Add this BEFORE super.onCreate
+        // 1. UI THEME SETTINGS
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         super.onCreate(savedInstanceState);
-
         setContentView(R.layout.activity_main);
 
-        // 1. BIND VIEW & INITIAL STYLE
+        // 2. VIEW INITIALIZATION
         bottomNavigationView = findViewById(R.id.bottom_navigation);
-
-        // Remove the Material 3 selection pill/indicator
+        // Remove selection background tint for a cleaner look
         bottomNavigationView.setItemActiveIndicatorColor(ColorStateList.valueOf(Color.TRANSPARENT));
-        // Remove the gray ripple/flash when clicking icons
         bottomNavigationView.setItemRippleColor(ColorStateList.valueOf(Color.TRANSPARENT));
 
-        // 2. FETCH PERSISTED USER ROLE
+        // 3. ROLE DATA FETCHING
         SharedPreferences prefs = getSharedPreferences("DocConnectData", MODE_PRIVATE);
-        userRole = prefs.getString("selected_role", "user");
+        userRole = prefs.getString("selected_role", "user"); // Default to user if null
 
-        // 3. CONFIGURE ROLE-BASED UI
+        // 4. NAVIGATION SETUP
         configureMenuForRole(userRole);
         setupNavigationListener();
-
-        // 4. SMART BACK-NAVIGATION LOGIC (Role-Aware)
-        // This prevents the app from closing if the user isn't on the Home screen.
         setupSmartBackNavigation();
 
-        // 5. BACKGROUND SERVICES
+        // 5. PERMISSIONS & SERVICES (Role-Specific)
         requestNotificationPermission();
+
+        // CRITICAL: Only users get Step Tracking. Doctors/Admins do not.
+        if ("user".equalsIgnoreCase(userRole)) {
+            checkActivityRecognitionPermission();
+        } else {
+            // Explicitly stop service if role is not 'user' to save battery
+            stopService(new Intent(this, StepService.class));
+        }
+
+        // 6. FIREBASE SYNC
         syncFCMTokenToDatabase();
         subscribeToRoleTopic(userRole);
 
-        // 6. STARTUP LOGIC (Deep Links & Default Fragment)
+        // 7. INITIAL FRAGMENT LOAD
         if (savedInstanceState == null) {
             bottomNavigationView.post(() -> {
                 Intent intent = getIntent();
@@ -82,23 +87,62 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * SMART BACK-NAVIGATION:
-     * If user is on Appointments/Chats/Profile -> Pressing Back moves to Home.
-     * If user is ALREADY on Home -> Pressing Back exits the app.
+     * Checks Activity Recognition for Step Tracking (Android 10+)
+     */
+    private void checkActivityRecognitionPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACTIVITY_RECOGNITION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACTIVITY_RECOGNITION},
+                        ACTIVITY_RECOGNITION_REQUEST_CODE);
+            } else {
+                startStepService();
+            }
+        } else {
+            startStepService();
+        }
+    }
+
+    /**
+     * Starts the Foreground StepService safely
+     */
+    private void startStepService() {
+        // Double check role before starting to be 100% safe
+        if (!"user".equalsIgnoreCase(userRole)) return;
+
+        Intent serviceIntent = new Intent(this, StepService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent);
+        } else {
+            startService(serviceIntent);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == ACTIVITY_RECOGNITION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startStepService();
+            } else {
+                Toast.makeText(this, "Step tracking disabled: Permission denied", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    /**
+     * Role-aware back navigation logic
      */
     private void setupSmartBackNavigation() {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                // Determine the "Home" ID based on the current user role
                 int homeId = "doctor".equals(userRole) ? R.id.nav_doc_home : R.id.nav_home;
-
-                // Check which tab is currently selected in the BottomNav
                 if (bottomNavigationView.getSelectedItemId() != homeId) {
-                    // If not on Home, jump back to the Home tab
                     bottomNavigationView.setSelectedItemId(homeId);
                 } else {
-                    // If already on Home, disable this interceptor and actually exit the app
                     setEnabled(false);
                     getOnBackPressedDispatcher().onBackPressed();
                 }
@@ -106,19 +150,15 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * LOGIC: Forces the correct starting fragment based on role.
-     */
     private void loadDefaultHome() {
         int homeId = "doctor".equals(userRole) ? R.id.nav_doc_home : R.id.nav_home;
         Fragment homeFrag = "doctor".equals(userRole) ? new DoctorHomeFragment() : new HomeFragment();
-
         bottomNavigationView.setSelectedItemId(homeId);
         loadFragment(homeFrag);
     }
 
     /**
-     * NAVIGATION LISTENER: Swaps fragments based on BottomNav selection.
+     * Handles BottomNavigationView item selections based on User Role
      */
     private void setupNavigationListener() {
         bottomNavigationView.setOnItemSelectedListener(item -> {
@@ -132,8 +172,7 @@ public class MainActivity extends AppCompatActivity {
                 else if (id == R.id.nav_appointments) selectedFragment = new AppointmentsFragment();
                 else if (id == R.id.nav_chats) selectedFragment = new ChatsFragment();
                 else if (id == R.id.nav_profile) selectedFragment = new ProfileFragment();
-            }
-            else if ("doctor".equals(userRole)) {
+            } else if ("doctor".equals(userRole)) {
                 if (id == R.id.nav_doc_home) selectedFragment = new DoctorHomeFragment();
                 else if (id == R.id.nav_doc_schedule) selectedFragment = new DoctorScheduleFragment();
                 else if (id == R.id.nav_doc_chats) selectedFragment = new DoctorChatsFragment();
@@ -145,22 +184,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * FRAGMENT LOADER: Performs the actual UI swap.
+     * Utility to swap fragments with state-loss prevention
      */
     private boolean loadFragment(Fragment fragment) {
         if (fragment == null || isFinishing() || isDestroyed()) return false;
         if (getSupportFragmentManager().isStateSaved()) return false;
 
-        getSupportFragmentManager()
-                .beginTransaction()
+        getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .commitAllowingStateLoss();
-
         return true;
     }
 
     /**
-     * NOTIFICATION HANDLING: Redirects users to specific screens from a notification.
+     * Handles deep linking and notification taps
      */
     private void handleIntent(Intent intent) {
         if (intent != null && intent.hasExtra("navigate_to")) {
@@ -178,7 +215,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * MENU INFLATER: Swaps menus so Doctors don't see Patient options and vice-versa.
+     * Dynamically swaps the menu XML based on the logged-in role
      */
     private void configureMenuForRole(String role) {
         bottomNavigationView.getMenu().clear();
@@ -190,7 +227,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * FCM TOKEN SYNC: Updates the database with the device's unique notification ID.
+     * Syncs the unique FCM device token to the correct Firebase node
      */
     private void syncFCMTokenToDatabase() {
         FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
@@ -207,7 +244,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * PERMISSIONS: Requests notification access for Android 13+.
+     * Requests notification permissions for Android 13+
      */
     private void requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -216,8 +253,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
-    // --- ACTIVITY LIFECYCLE ---
 
     @Override
     protected void onResume() {

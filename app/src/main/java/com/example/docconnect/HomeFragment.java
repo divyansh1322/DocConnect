@@ -40,13 +40,15 @@ import java.util.List;
 
 /**
  * HOME FRAGMENT: The production-ready dashboard.
- * Optimized for real-time background step syncing and dynamic Firebase updates.
+ * Optimized for role-based logic, real-time sync, and memory safety.
  */
 public class HomeFragment extends Fragment {
 
     // --- VIEW CACHING & STATE ---
     private View rootView;
     private boolean isDataInitialized = false;
+    private String userRole = "";
+    private boolean isReceiverRegistered = false; // Flag to prevent unregistering errors
 
     // --- UI ELEMENTS ---
     private TextView tvStepCount, tvUserName, tvBmiScore, tvStatLabel, tvGreeting;
@@ -57,8 +59,10 @@ public class HomeFragment extends Fragment {
     private TextView tvSeeAllSpecialist, tvSeeAllArticles, tvSeeAllDoctors;
 
     // --- PERSISTENCE ---
-    private SharedPreferences sharedPreferences;
+    private SharedPreferences stepPrefs;
+    private SharedPreferences rolePrefs;
     private static final String PREF_NAME = "StepPrefs";
+    private static final String ROLE_PREF_NAME = "DocConnectData";
 
     // --- FIREBASE ---
     private FirebaseAuth mAuth;
@@ -66,26 +70,14 @@ public class HomeFragment extends Fragment {
     private String currentUserId;
 
     /**
-     * BROADCAST RECEIVER: INSTANT REAL-TIME SYNC
-     * This hears the "STEP_UPDATE" broadcast from StepService.
-     * It pulls the LIVE_STEPS directly from the intent for immediate UI ticking.
+     * BROADCAST RECEIVER: Listens for step updates from StepService.
      */
     private final BroadcastReceiver stepReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (intent != null && intent.hasExtra("LIVE_STEPS")) {
-                // Get data from memory, not disk
                 int liveSteps = intent.getIntExtra("LIVE_STEPS", 0);
-
-                // Update UI instantly
-                tvStepCount.setText(String.valueOf(liveSteps));
-
-                // Update Progress Bar
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    progressSteps.setProgress(liveSteps, true);
-                } else {
-                    progressSteps.setProgress(liveSteps);
-                }
+                updateStepUIWithLiveValue(liveSteps);
             }
         }
     };
@@ -93,11 +85,17 @@ public class HomeFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // VIEW CACHING: Prevents flickering when switching BottomNav tabs
+        // VIEW CACHING: Prevents UI flickering and redundant inflation
         if (rootView != null) return rootView;
 
         rootView = inflater.inflate(R.layout.fragment_home, container, false);
-        sharedPreferences = requireActivity().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+
+        // Initialize SharedPreferences
+        stepPrefs = requireActivity().getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        rolePrefs = requireActivity().getSharedPreferences(ROLE_PREF_NAME, Context.MODE_PRIVATE);
+
+        // Fetch Role immediately to drive logic
+        userRole = rolePrefs.getString("selected_role", "user");
 
         // Firebase Auth & Database Reference
         mAuth = FirebaseAuth.getInstance();
@@ -108,10 +106,12 @@ public class HomeFragment extends Fragment {
         // 1. Initialize all UI Views
         initViews(rootView);
 
-        // 2. Start the 24/7 Step Tracker Service
-        startStepService();
+        // 2. Role-Based Service Initiation
+        if ("user".equalsIgnoreCase(userRole)) {
+            startStepService();
+        }
 
-        // 3. Setup Listeners and Data Lists
+        // 3. Setup Listeners and Static Data
         setupClickListeners(rootView);
         setupRecyclers(rootView);
 
@@ -140,17 +140,16 @@ public class HomeFragment extends Fragment {
         tvSeeAllArticles = view.findViewById(R.id.tvSeeAllArticles);
         tvSeeAllDoctors = view.findViewById(R.id.tvSeeAllDoctors);
 
-        // Progress Bar Max Goal: 6000 steps
         if (progressSteps != null) progressSteps.setMax(6000);
-        // Disable SeekBar interaction (Visual Use Only)
         if (viewBmiVisual != null) viewBmiVisual.setEnabled(false);
     }
 
     /**
-     * SERVICE INITIATION
-     * Checks for Activity Recognition permissions (Android 10+) before starting FGS.
+     * Starts StepService only after permission check and role verification.
      */
     private void startStepService() {
+        if (!"user".equalsIgnoreCase(userRole)) return;
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACTIVITY_RECOGNITION)
                     != PackageManager.PERMISSION_GRANTED) {
@@ -171,17 +170,11 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    /**
-     * STANDARD UI UPDATE: Pulls from Prefs (used for initial load)
-     */
     private void updateStepUI() {
-        int steps = sharedPreferences.getInt("last_steps", 0);
+        int steps = stepPrefs.getInt("last_steps", 0);
         updateStepUIWithLiveValue(steps);
     }
 
-    /**
-     * LIVE UI UPDATE: Called by BroadcastReceiver for instant ticking
-     */
     private void updateStepUIWithLiveValue(int steps) {
         if (tvStepCount != null) tvStepCount.setText(String.valueOf(steps));
         if (progressSteps != null) {
@@ -193,23 +186,23 @@ public class HomeFragment extends Fragment {
         }
     }
 
-    /**
-     * CLICK LOGIC
-     * Handles all navigations for Doctors, Specialities, Search, and Articles.
-     */
     private void setupClickListeners(View view) {
-        if (bmiCard != null) bmiCard.setOnClickListener(v -> startActivity(new Intent(requireContext(), BMITrackerActivity.class)));
-        if (tvSeeAllSpecialist != null) tvSeeAllSpecialist.setOnClickListener(v -> startActivity(new Intent(requireContext(), SpecialityActivity.class)));
-        if (tvSeeAllArticles != null) tvSeeAllArticles.setOnClickListener(v -> startActivity(new Intent(requireContext(), ArticleActivity.class)));
-        if (tvSeeAllDoctors != null) tvSeeAllDoctors.setOnClickListener(v -> startActivity(new Intent(requireContext(), TopDoctorsActivity.class)));
+        if (bmiCard != null)
+            bmiCard.setOnClickListener(v -> startActivity(new Intent(requireContext(), BMITrackerActivity.class)));
+        if (tvSeeAllSpecialist != null)
+            tvSeeAllSpecialist.setOnClickListener(v -> startActivity(new Intent(requireContext(), SpecialityActivity.class)));
+        if (tvSeeAllArticles != null)
+            tvSeeAllArticles.setOnClickListener(v -> startActivity(new Intent(requireContext(), ArticleActivity.class)));
+        if (tvSeeAllDoctors != null)
+            tvSeeAllDoctors.setOnClickListener(v -> startActivity(new Intent(requireContext(), TopDoctorsActivity.class)));
 
         View btnNotify = view.findViewById(R.id.btnNotification);
-        if (btnNotify != null) btnNotify.setOnClickListener(v -> startActivity(new Intent(requireContext(), NotificationsActivity.class)));
+        if (btnNotify != null)
+            btnNotify.setOnClickListener(v -> startActivity(new Intent(requireContext(), NotificationsActivity.class)));
 
         View searchBar = view.findViewById(R.id.searchContainer);
         if (searchBar != null) searchBar.setOnClickListener(v -> navigateToSearch("", true));
 
-        // Category Grids
         setupCategoryClick(view.findViewById(R.id.layoutDentist), "Orthodontics");
         setupCategoryClick(view.findViewById(R.id.layoutNeurology), "Neurologist");
         setupCategoryClick(view.findViewById(R.id.layoutOrthopedic), "Orthopedic");
@@ -217,25 +210,25 @@ public class HomeFragment extends Fragment {
         setupCategoryClick(view.findViewById(R.id.layoutNutrition), "Nutritionist");
         setupCategoryClick(view.findViewById(R.id.layoutEye), "ENT");
 
-        // Article Clicks
-        if (cardArticleImmunity != null) cardArticleImmunity.setOnClickListener(v -> openWebArticle("https://www.healthline.com/nutrition/how-to-boost-immune-system"));
-        if (cardArticleHeart != null) cardArticleHeart.setOnClickListener(v -> openWebArticle("https://www.heart.org/en/healthy-living/healthy-eating"));
+        if (cardArticleImmunity != null)
+            cardArticleImmunity.setOnClickListener(v -> openWebArticle("https://www.healthline.com/nutrition/how-to-boost-immune-system"));
+        if (cardArticleHeart != null)
+            cardArticleHeart.setOnClickListener(v -> openWebArticle("https://www.heart.org/en/healthy-living/healthy-eating"));
     }
 
     private void setupCategoryClick(View view, String query) {
         if (view != null) view.setOnClickListener(v -> navigateToSearch(query, false));
     }
 
-    /**
-     * DATA SYNC LOGIC
-     */
     private void refreshAllData() {
         if (!isAdded() || currentUserId == null) return;
         setDynamicGreeting();
         loadUserData();
         loadLatestBmiData();
         checkAppointmentStatusForPopups();
-        updateStepUI();
+        if ("user".equalsIgnoreCase(userRole)) {
+            updateStepUI();
+        }
     }
 
     private void loadUserData() {
@@ -266,12 +259,14 @@ public class HomeFragment extends Fragment {
                             for (DataSnapshot child : snapshot.getChildren()) {
                                 String scoreStr = String.valueOf(child.child("bmi_score").getValue());
                                 if (tvBmiScore != null) tvBmiScore.setText(scoreStr);
-                                if (tvStatLabel != null) tvStatLabel.setText(child.child("status").getValue(String.class));
+                                if (tvStatLabel != null)
+                                    tvStatLabel.setText(child.child("status").getValue(String.class));
 
                                 try {
                                     float val = Float.parseFloat(scoreStr);
                                     int progress = (int) ((val - 15) * 4);
-                                    if (viewBmiVisual != null) viewBmiVisual.setProgress(Math.max(0, Math.min(100, progress)));
+                                    if (viewBmiVisual != null)
+                                        viewBmiVisual.setProgress(Math.max(0, Math.min(100, progress)));
                                 } catch (Exception e) {
                                     if (viewBmiVisual != null) viewBmiVisual.setProgress(50);
                                 }
@@ -383,12 +378,15 @@ public class HomeFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        // Register Broadcast Receiver with Security flag for Android 14
-        IntentFilter filter = new IntentFilter("STEP_UPDATE");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requireActivity().registerReceiver(stepReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            requireActivity().registerReceiver(stepReceiver, filter);
+        // PROFESSIONAL SYNC: Only register receiver if the role is 'user'
+        if ("user".equalsIgnoreCase(userRole)) {
+            IntentFilter filter = new IntentFilter("STEP_UPDATE");
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                requireActivity().registerReceiver(stepReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                requireActivity().registerReceiver(stepReceiver, filter);
+            }
+            isReceiverRegistered = true;
         }
         refreshAllData();
     }
@@ -396,11 +394,14 @@ public class HomeFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-        // Memory safety: unregister to prevent leaks
-        try {
-            requireActivity().unregisterReceiver(stepReceiver);
-        } catch (Exception e) {
-            Log.e("HomeFragment", "Receiver already unregistered");
+        // CLEANUP: Prevent memory leaks by unregistering the receiver safely
+        if (isReceiverRegistered) {
+            try {
+                requireActivity().unregisterReceiver(stepReceiver);
+                isReceiverRegistered = false;
+            } catch (Exception e) {
+                Log.e("HomeFragment", "Receiver error: " + e.getMessage());
+            }
         }
     }
 }

@@ -20,48 +20,60 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-/**
- * UPDATED SPLASH SCREEN
- * Includes staggered animations for a premium UI feel.
- * Logic: Checks Auth -> Checks Admin -> Checks User -> Checks Doctor -> Handles Redirection.
- */
 public class SplashScreenActivity extends AppCompatActivity {
+
+    // A static variable survives Activity destruction/recreation.
+    // This ensures we only attempt to enable persistence ONCE per app session.
+    private static boolean isPersistenceEnabled = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // 1. SAFE PERSISTENCE INITIALIZATION
+        // This must happen BEFORE any other Firebase call.
+        if (!isPersistenceEnabled) {
+            try {
+                FirebaseDatabase.getInstance().setPersistenceEnabled(true);
+                isPersistenceEnabled = true; // Mark as done so it never runs again
+            } catch (Exception e) {
+                // If it fails (usually because a reference was already created), we catch it
+                // so the app doesn't crash.
+            }
+        }
+
         setContentView(R.layout.activity_splash_screen);
 
-        // 1. Initialize UI Elements for Animation
+        // 2. UI INITIALIZATION & ANIMATION
+        setupAnimations();
+
+        // 3. LOGIC DELAY
+        // 3000ms allows the staggered animations to play out beautifully
+        new Handler().postDelayed(this::checkUserStatus, 3000);
+    }
+
+    private void setupAnimations() {
         ImageView logo = findViewById(R.id.logo_card);
         TextView title = findViewById(R.id.tv_app_name);
         TextView tagline = findViewById(R.id.tv_tagline);
 
-        // 2. Load and Apply Staggered Animations
-        // We load unique instances to apply different offsets
         Animation logoAnim = AnimationUtils.loadAnimation(this, R.anim.splash_fade_in_animation);
         Animation titleAnim = AnimationUtils.loadAnimation(this, R.anim.splash_fade_in_animation);
         Animation taglineAnim = AnimationUtils.loadAnimation(this, R.anim.splash_fade_in_animation);
 
-        // Logo starts immediately
         logo.startAnimation(logoAnim);
 
-        // Title pops in 300ms after the logo starts
         titleAnim.setStartOffset(300);
         title.startAnimation(titleAnim);
 
-        // Tagline pops in 600ms after the logo starts
         taglineAnim.setStartOffset(600);
         tagline.startAnimation(taglineAnim);
-
-        // 3. Logic Delay
-        // Increased to 3000ms (3s) to allow the staggered animation to complete beautifully
-        new Handler().postDelayed(this::checkUserStatus, 3000);
     }
 
     private void checkUserStatus() {
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
 
+        // If no user is logged in, send them straight to role selection
         if (currentUser == null) {
             navigateTo(RoleSelectionActivity.class);
             return;
@@ -69,85 +81,107 @@ public class SplashScreenActivity extends AppCompatActivity {
 
         String uid = currentUser.getUid();
 
-        // TIER 1: ADMIN CHECK
-        FirebaseDatabase.getInstance().getReference("admins")
-                .child(uid)
+        // --- THE OFFLINE-READY HINT ---
+        // We check SharedPreferences first. If we already know the user is a doctor,
+        // we skip the Admin/User checks which would "hang" if the user is offline.
+        SharedPreferences prefs = getSharedPreferences("DocConnectData", MODE_PRIVATE);
+        String savedRole = prefs.getString("selected_role", "unknown");
+
+        switch (savedRole) {
+            case "doctor":
+                checkDoctorPath(uid);
+                break;
+            case "user":
+                checkPatientPath(uid);
+                break;
+            case "super_admin":
+                checkAdminPath(uid);
+                break;
+            default:
+                // If no role is saved (first time), start the full check waterfall
+                startFullWaterfallCheck(uid);
+                break;
+        }
+    }
+
+    /**
+     * TIER 1: ADMIN CHECK
+     */
+    private void checkAdminPath(String uid) {
+        FirebaseDatabase.getInstance().getReference("admins").child(uid)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
                         if (snapshot.exists()) {
-                            String role = snapshot.child("role").getValue(String.class);
-                            String status = snapshot.child("status").getValue(String.class);
-
-                            if ("super_admin".equals(role) && (status == null || status.equals("active"))) {
-                                navigateTo(AdminDashboardActivity.class);
-                                return;
-                            }
+                            saveRoleLocally("super_admin");
+                            navigateTo(AdminDashboardActivity.class);
+                        } else {
+                            // Fallback if the role in SharedPreferences was wrong or revoked
+                            startFullWaterfallCheck(uid);
                         }
-                        // Not an admin, check for Patient (User)
-                        checkUser(uid);
                     }
-
                     @Override
-                    public void onCancelled(@NonNull DatabaseError error) {
-                        errorOut();
-                    }
+                    public void onCancelled(@NonNull DatabaseError error) { errorOut(); }
                 });
     }
 
-    private void checkUser(String uid) {
-        FirebaseDatabase.getInstance().getReference("users")
-                .child(uid)
+    /**
+     * TIER 2: PATIENT (USER) CHECK
+     */
+    private void checkPatientPath(String uid) {
+        FirebaseDatabase.getInstance().getReference("users").child(uid)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
                         if (snapshot.exists()) {
-                            // User found, save role and check completion
                             saveRoleLocally("user");
-                            checkProfile(snapshot, ProfileCreationActivity.class);
+                            checkProfileCompletion(snapshot, ProfileCreationActivity.class);
                         } else {
-                            // Not a patient, check if they are a doctor
-                            checkDoctor(uid);
+                            // If not found, move to Doctor check
+                            checkDoctorPath(uid);
                         }
                     }
-
                     @Override
-                    public void onCancelled(@NonNull DatabaseError error) {
-                        errorOut();
-                    }
+                    public void onCancelled(@NonNull DatabaseError error) { errorOut(); }
                 });
     }
 
-    private void checkDoctor(String uid) {
-        FirebaseDatabase.getInstance().getReference("doctors")
-                .child(uid)
+    /**
+     * TIER 3: DOCTOR CHECK
+     */
+    private void checkDoctorPath(String uid) {
+        FirebaseDatabase.getInstance().getReference("doctors").child(uid)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
                         if (snapshot.exists()) {
-                            // Doctor found, save role and check completion
                             saveRoleLocally("doctor");
-                            checkProfile(snapshot, DoctorProfileCreationActivity.class);
+                            checkProfileCompletion(snapshot, DoctorProfileCreationActivity.class);
                         } else {
-                            // Auth exists but record missing in DB
+                            // If authenticated but NO record exists anywhere, log them out
                             FirebaseAuth.getInstance().signOut();
                             navigateTo(RoleSelectionActivity.class);
                         }
                     }
-
                     @Override
-                    public void onCancelled(@NonNull DatabaseError error) {
-                        errorOut();
-                    }
+                    public void onCancelled(@NonNull DatabaseError error) { errorOut(); }
                 });
     }
 
-    private void checkProfile(DataSnapshot snapshot, Class<?> profileActivity) {
+    /**
+     * Starts the check from the top if we don't know the user's role yet.
+     */
+    private void startFullWaterfallCheck(String uid) {
+        // Start with Admin, then it flows to User, then Doctor
+        checkAdminPath(uid);
+    }
+
+    private void checkProfileCompletion(DataSnapshot snapshot, Class<?> profileActivity) {
         Boolean completed = snapshot.child("isProfileCompleted").getValue(Boolean.class);
         if (Boolean.TRUE.equals(completed)) {
             navigateTo(MainActivity.class);
         } else {
-            Toast.makeText(this, "Please complete your profile", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Complete your profile", Toast.LENGTH_SHORT).show();
             navigateTo(profileActivity);
         }
     }
@@ -164,10 +198,9 @@ public class SplashScreenActivity extends AppCompatActivity {
 
     private void navigateTo(Class<?> target) {
         Intent intent = new Intent(this, target);
+        // Clear activity stack so user cannot go back to Splash
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
-
-        // Professional fade transition
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
         finish();
     }
